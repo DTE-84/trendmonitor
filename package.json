@@ -13,8 +13,10 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@types/next": "^8.0.7",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "next": "^16.2.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {

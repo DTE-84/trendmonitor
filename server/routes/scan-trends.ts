@@ -1,4 +1,4 @@
-import { RequestHandler } from "express";
+import type { NextApiRequest, NextApiResponse } from 'next';
 import {
   fetchGooglePAAQuestions,
   categorizeQuestion,

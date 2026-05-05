@@ -67,7 +67,9 @@ export default function TrendMonitor() {
       });
 
       if (!response.ok) {
-        throw new Error('Scan failed');
+        const errorText = await response.text();
+        console.error('Scan failed response:', response.status, errorText);
+        throw new Error(errorText || 'Scan failed');
       }
 
       const data: ScanResult = await response.json();
