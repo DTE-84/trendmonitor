@@ -166,10 +166,12 @@ const MOCK_TRENDS: Trend[] = [
 ];
 
 export const handleScanTrends: RequestHandler = async (req, res) => {
+  console.log("[Trend Scan] Initializing scan request...", { sources: req.body?.sources });
   try {
     const { sources } = req.body as ScanTrendsRequest;
 
     if (!sources || !Array.isArray(sources) || sources.length === 0) {
+      console.warn("[Trend Scan] Rejected: No sources provided.");
       return res.status(400).json({ error: "No sources provided" });
     }
 
@@ -178,30 +180,37 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
     // Fetch from Google PAA if selected
     if (sources.includes("Google PAA")) {
       try {
+        console.log("[Trend Scan] Fetching Google PAA telemetry...");
         const paaQuestions = await fetchGooglePAAQuestions(
           "inheritance investing wealth planning trust estate"
         );
 
-        paaQuestions.slice(0, 5).forEach((q, idx) => {
-          const theme = categorizeQuestion(q.question);
-          trends.push({
-            rank: trends.length + 1,
-            question: q.question,
-            source: "Google PAA",
-            theme,
-            trend: idx === 0 ? "up" : idx < 3 ? "new" : "flat",
-            volume_pct: Math.max(50, 100 - idx * 15),
-            subreddit_or_tag: "google search",
-            investor_insight: generateInsight(q.question),
-            content_angle: generateContentAngle(q.question),
+        if (paaQuestions && paaQuestions.length > 0) {
+          paaQuestions.slice(0, 5).forEach((q, idx) => {
+            const theme = categorizeQuestion(q.question);
+            trends.push({
+              rank: trends.length + 1,
+              question: q.question,
+              source: "Google PAA",
+              theme,
+              trend: idx === 0 ? "up" : idx < 3 ? "new" : "flat",
+              volume_pct: Math.max(50, 100 - idx * 15),
+              subreddit_or_tag: "google search",
+              investor_insight: generateInsight(q.question),
+              content_angle: generateContentAngle(q.question),
+            });
           });
-        });
-      } catch (error) {
-        console.error("Error fetching Google PAA:", error);
+          console.log(`[Trend Scan] Successfully enriched with ${paaQuestions.length} Google nodes.`);
+        } else {
+          console.warn("[Trend Scan] Google PAA returned empty or invalid results.");
+        }
+      } catch (error: any) {
+        console.error("[Trend Scan] Google PAA Uplink Failed:", error.message);
+        // Continue to mock data - maintain system availability
       }
     }
 
-    // Combine with mock data for other sources to have a complete dataset
+    // Combine with mock data for other sources
     const otherSourceTrends = MOCK_TRENDS.filter(
       t => sources.includes(t.source) && t.source !== "Google PAA"
     )
@@ -214,7 +223,7 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
     const allTrends = [...trends, ...otherSourceTrends].slice(0, 10);
 
     if (allTrends.length === 0) {
-      // Return mock data if no real data available
+      console.log("[Trend Scan] No live data; falling back to deterministic mock engine.");
       return res.json({
         questions: MOCK_TRENDS.slice(0, 10).map((t, idx) => ({
           ...t,
@@ -233,11 +242,13 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
       themes[t.theme] = (themes[t.theme] || 0) + 1;
     });
 
-    const topTheme = Object.entries(themes).sort((a, b) => b[1] - a[1])[0];
+    const themeEntries = Object.entries(themes).sort((a, b) => b[1] - a[1]);
+    const topTheme = themeEntries[0];
     const topThemePct = topTheme
       ? Math.round((topTheme[1] / allTrends.length) * 100)
       : 0;
 
+    console.log("[Trend Scan] Analysis complete. Dispatching results.");
     res.json({
       questions: allTrends,
       top_theme: topTheme?.[0] || "General",
@@ -245,8 +256,12 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
       summary:
         "Live trends show strong interest in inheritance planning and wealth transfer strategies. Investors should focus on addressing key pain points around taxes, trusts, and investment decisions.",
     } as ScanTrendsResponse);
-  } catch (error) {
-    console.error("Scan trends error:", error);
-    res.status(500).json({ error: "Failed to scan trends" });
+  } catch (error: any) {
+    console.error("[Trend Scan CRITICAL FAILURE]:", error);
+    res.status(500).json({ 
+      error: "Nova Analysis Node Failed", 
+      detail: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined
+    });
   }
 };
