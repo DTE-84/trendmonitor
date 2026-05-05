@@ -165,12 +165,20 @@ const MOCK_TRENDS: Trend[] = [
   },
 ];
 
-export const handleScanTrends: RequestHandler = async (req, res) => {
-  console.log("[Trend Scan] Initializing scan request...", { 
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  console.log("[Trend Scan] Initializing scan request...", {
     body: req.body,
-    headers: req.headers['content-type'] 
+    headers: req.headers["content-type"],
   });
+
   try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
     if (!req.body) {
       console.error("[Trend Scan] Error: req.body is undefined");
       return res.status(400).json({ error: "Request body is missing" });
