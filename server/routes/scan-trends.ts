@@ -166,8 +166,16 @@ const MOCK_TRENDS: Trend[] = [
 ];
 
 export const handleScanTrends: RequestHandler = async (req, res) => {
-  console.log("[Trend Scan] Initializing scan request...", { sources: req.body?.sources });
+  console.log("[Trend Scan] Initializing scan request...", { 
+    body: req.body,
+    headers: req.headers['content-type'] 
+  });
   try {
+    if (!req.body) {
+      console.error("[Trend Scan] Error: req.body is undefined");
+      return res.status(400).json({ error: "Request body is missing" });
+    }
+
     const { sources } = req.body as ScanTrendsRequest;
 
     if (!sources || !Array.isArray(sources) || sources.length === 0) {
@@ -200,17 +208,18 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
               content_angle: generateContentAngle(q.question),
             });
           });
-          console.log(`[Trend Scan] Successfully enriched with ${paaQuestions.length} Google nodes.`);
+          console.log(`[Trend Scan] Successfully enriched with ${trends.length} Google nodes.`);
         } else {
           console.warn("[Trend Scan] Google PAA returned empty or invalid results.");
         }
       } catch (error: any) {
-        console.error("[Trend Scan] Google PAA Uplink Failed:", error.message);
+        console.error("[Trend Scan] Google PAA Uplink Failed:", error.message || error);
         // Continue to mock data - maintain system availability
       }
     }
 
     // Combine with mock data for other sources
+    console.log("[Trend Scan] Filtering mock data for sources:", sources.filter(s => s !== "Google PAA"));
     const otherSourceTrends = MOCK_TRENDS.filter(
       t => sources.includes(t.source) && t.source !== "Google PAA"
     )
@@ -221,9 +230,10 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
       }));
 
     const allTrends = [...trends, ...otherSourceTrends].slice(0, 10);
+    console.log(`[Trend Scan] Total trends gathered: ${allTrends.length}`);
 
     if (allTrends.length === 0) {
-      console.log("[Trend Scan] No live data; falling back to deterministic mock engine.");
+      console.log("[Trend Scan] No data found for selected sources; falling back to default mock data.");
       return res.json({
         questions: MOCK_TRENDS.slice(0, 10).map((t, idx) => ({
           ...t,
@@ -260,8 +270,8 @@ export const handleScanTrends: RequestHandler = async (req, res) => {
     console.error("[Trend Scan CRITICAL FAILURE]:", error);
     res.status(500).json({ 
       error: "Nova Analysis Node Failed", 
-      detail: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined
+      detail: error.message || "Unknown error",
+      stack: error.stack
     });
   }
 };

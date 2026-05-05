@@ -36,13 +36,13 @@ export async function fetchGooglePAAQuestions(
     const paaResults = data.people_also_ask || [];
 
     return paaResults.map(
-      (item: { question: string; snippet: string; title: string; link: string }) => ({
-        question: item.question,
+      (item: any) => ({
+        question: item.question || "",
         snippet: item.snippet || "",
         title: item.title || "",
         link: item.link || "",
       })
-    );
+    ).filter((item: any) => item.question !== "");
   } catch (error) {
     console.error("SerpAPI error:", error);
     return [];
@@ -53,6 +53,7 @@ export async function fetchGooglePAAQuestions(
  * Categorize a question into one of the inheritance themes
  */
 export function categorizeQuestion(question: string): string {
+  if (!question) return "General";
   const lower = question.toLowerCase();
 
   if (
@@ -132,6 +133,7 @@ export function generateInsight(question: string): string {
  * Generate content angle for creators
  */
 export function generateContentAngle(question: string): string {
+  if (!question) return "Create educational content addressing this specific question.";
   if (question.toLowerCase().includes("how much")) {
     return "Create a calculator tool or guide showing actual inheritance tax scenarios.";
   } else if (question.toLowerCase().includes("difference between")) {
