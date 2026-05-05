@@ -1,11 +1,11 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from "next";
 import {
   fetchGooglePAAQuestions,
   categorizeQuestion,
   determineTrend,
   generateInsight,
   generateContentAngle,
-} from "./serpapi-trends";
+} from "../server/routes/serpapi-trends";
 
 interface ScanTrendsRequest {
   sources: string[];
@@ -34,7 +34,8 @@ interface ScanTrendsResponse {
 const MOCK_TRENDS: Trend[] = [
   {
     rank: 1,
-    question: "How much inheritance tax do I have to pay on my parents' estate?",
+    question:
+      "How much inheritance tax do I have to pay on my parents' estate?",
     source: "Reddit",
     theme: "Tax strategy",
     trend: "up",
@@ -68,7 +69,8 @@ const MOCK_TRENDS: Trend[] = [
     subreddit_or_tag: "financial advice",
     investor_insight:
       "New entrants asking about investment priority. Shows receptiveness to wealth-building conversations and investment guidance.",
-    content_angle: "Share a framework for prioritizing debt vs. investment post-inheritance.",
+    content_angle:
+      "Share a framework for prioritizing debt vs. investment post-inheritance.",
   },
   {
     rank: 4,
@@ -94,7 +96,8 @@ const MOCK_TRENDS: Trend[] = [
     subreddit_or_tag: "legal education",
     investor_insight:
       "Continuing regulatory confusion creates ongoing demand for legal education content.",
-    content_angle: "Video series on state-specific will execution requirements.",
+    content_angle:
+      "Video series on state-specific will execution requirements.",
   },
   {
     rank: 6,
@@ -151,8 +154,7 @@ const MOCK_TRENDS: Trend[] = [
   },
   {
     rank: 10,
-    question:
-      "What happens to credit card debt when someone passes away?",
+    question: "What happens to credit card debt when someone passes away?",
     source: "News comments",
     theme: "General",
     trend: "flat",
@@ -160,14 +162,13 @@ const MOCK_TRENDS: Trend[] = [
     subreddit_or_tag: "consumer finance",
     investor_insight:
       "Anxiety around liability signals heirs concerned about obligations. Trust and safety angle.",
-    content_angle:
-      "Clarify what debts are inherited vs. forgiven after death.",
+    content_angle: "Clarify what debts are inherited vs. forgiven after death.",
   },
 ];
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   console.log("[Trend Scan] Initializing scan request...", {
     body: req.body,
@@ -198,7 +199,7 @@ export default async function handler(
       try {
         console.log("[Trend Scan] Fetching Google PAA telemetry...");
         const paaQuestions = await fetchGooglePAAQuestions(
-          "inheritance investing wealth planning trust estate"
+          "inheritance investing wealth planning trust estate",
         );
 
         if (paaQuestions && paaQuestions.length > 0) {
@@ -216,20 +217,30 @@ export default async function handler(
               content_angle: generateContentAngle(q.question),
             });
           });
-          console.log(`[Trend Scan] Successfully enriched with ${trends.length} Google nodes.`);
+          console.log(
+            `[Trend Scan] Successfully enriched with ${trends.length} Google nodes.`,
+          );
         } else {
-          console.warn("[Trend Scan] Google PAA returned empty or invalid results.");
+          console.warn(
+            "[Trend Scan] Google PAA returned empty or invalid results.",
+          );
         }
       } catch (error: any) {
-        console.error("[Trend Scan] Google PAA Uplink Failed:", error.message || error);
+        console.error(
+          "[Trend Scan] Google PAA Uplink Failed:",
+          error.message || error,
+        );
         // Continue to mock data - maintain system availability
       }
     }
 
     // Combine with mock data for other sources
-    console.log("[Trend Scan] Filtering mock data for sources:", sources.filter(s => s !== "Google PAA"));
+    console.log(
+      "[Trend Scan] Filtering mock data for sources:",
+      sources.filter((s) => s !== "Google PAA"),
+    );
     const otherSourceTrends = MOCK_TRENDS.filter(
-      t => sources.includes(t.source) && t.source !== "Google PAA"
+      (t) => sources.includes(t.source) && t.source !== "Google PAA",
     )
       .slice(0, Math.max(0, 10 - trends.length))
       .map((t, idx) => ({
@@ -241,7 +252,9 @@ export default async function handler(
     console.log(`[Trend Scan] Total trends gathered: ${allTrends.length}`);
 
     if (allTrends.length === 0) {
-      console.log("[Trend Scan] No data found for selected sources; falling back to default mock data.");
+      console.log(
+        "[Trend Scan] No data found for selected sources; falling back to default mock data.",
+      );
       return res.json({
         questions: MOCK_TRENDS.slice(0, 10).map((t, idx) => ({
           ...t,
@@ -256,7 +269,7 @@ export default async function handler(
 
     // Calculate theme distribution
     const themes: Record<string, number> = {};
-    allTrends.forEach(t => {
+    allTrends.forEach((t) => {
       themes[t.theme] = (themes[t.theme] || 0) + 1;
     });
 
@@ -276,10 +289,10 @@ export default async function handler(
     } as ScanTrendsResponse);
   } catch (error: any) {
     console.error("[Trend Scan CRITICAL FAILURE]:", error);
-    res.status(500).json({ 
-      error: "Nova Analysis Node Failed", 
+    res.status(500).json({
+      error: "Nova Analysis Node Failed",
       detail: error.message || "Unknown error",
-      stack: error.stack
+      stack: error.stack,
     });
   }
-};
+}
