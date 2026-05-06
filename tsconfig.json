@@ -1,15 +1,11 @@
 {
   "compilerOptions": {
-    "typeRoots": ["node_modules/@types", "src/types"],
-    "types": ["node", "vite/client"],
-
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./client/*"],
+      "@shared/*": ["./shared/*"]
+    },
+    "ignoreDeprecations": "6.0",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
@@ -19,21 +15,12 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-
-    /* Linting */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
-    "strictNullChecks": false,
-
-    /* Path mapping */
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./client/*"],
-      "@shared/*": ["./shared/*"]
-    }
+    "strictNullChecks": false
   },
   "include": [
     "client/**/*",
