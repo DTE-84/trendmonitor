@@ -1,4 +1,4 @@
-import { Trend } from '@/pages/TrendMonitor';
+import { Trend } from '@shared/api';
 
 const THEME_COLORS: Record<
   string,

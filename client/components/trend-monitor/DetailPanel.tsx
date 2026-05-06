@@ -1,4 +1,4 @@
-import { Trend } from '@/pages/TrendMonitor';
+import { Trend } from '@shared/api';
 import { useState } from 'react';
 
 interface DetailPanelProps {

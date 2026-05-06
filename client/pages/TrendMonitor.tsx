@@ -1,29 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Trend, ScanResult } from '@shared/api';
 import { TrendMonitorHeader } from '@/components/trend-monitor/Header';
 import { MetricsStrip } from '@/components/trend-monitor/MetricsStrip';
 import { SourceControls } from '@/components/trend-monitor/SourceControls';
 import { ResultsPanel } from '@/components/trend-monitor/ResultsPanel';
 import { DetailPanel } from '@/components/trend-monitor/DetailPanel';
 import { ThemeBreakdownPanel } from '@/components/trend-monitor/ThemeBreakdownPanel';
-
-export interface Trend {
-  rank: number;
-  question: string;
-  source: string;
-  theme: string;
-  trend: 'up' | 'new' | 'flat';
-  volume_pct: number;
-  subreddit_or_tag: string;
-  investor_insight: string;
-  content_angle: string;
-}
-
-export interface ScanResult {
-  questions: Trend[];
-  top_theme: string;
-  top_theme_pct: number;
-  summary: string;
-}
 
 export default function TrendMonitor() {
   const [results, setResults] = useState<Trend[]>([]);

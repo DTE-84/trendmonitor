@@ -1,4 +1,4 @@
-import { Trend } from '@/pages/TrendMonitor';
+import { Trend } from '@shared/api';
 import { TrendRow } from './TrendRow';
 
 interface ResultsPanelProps {
