@@ -13,8 +13,10 @@ export interface GooglePAAQuestion {
 export async function fetchGooglePAAQuestions(
   query: string
 ): Promise<GooglePAAQuestion[]> {
-  if (!SERPAPI_KEY || SERPAPI_KEY === "REPLACE_ENV.SERPAPI_KEY") {
-    console.warn("SERPAPI_KEY not set, returning empty results");
+  console.log(`[SerpAPI] Initiating fetch for query: "${query}"`);
+  
+  if (!SERPAPI_KEY || SERPAPI_KEY === "REPLACE_ENV.SERPAPI_KEY" || SERPAPI_KEY.includes("REPLACE")) {
+    console.warn("[SerpAPI] SERPAPI_KEY is not configured or contains placeholder. Returning empty results.");
     return [];
   }
 
@@ -25,14 +27,17 @@ export async function fetchGooglePAAQuestions(
       api_key: SERPAPI_KEY,
     });
 
-    const response = await fetch(`https://serpapi.com/search?${params}`);
+    const url = `https://serpapi.com/search?${params}`;
+    const response = await fetch(url);
 
     if (!response.ok) {
-      console.error("SerpAPI response error:", response.status);
+      const errorBody = await response.text();
+      console.error(`[SerpAPI] Error response (${response.status}):`, errorBody);
       return [];
     }
 
     const data = await response.json();
+    console.log(`[SerpAPI] Successfully retrieved ${data.people_also_ask?.length || 0} PAA results.`);
     const paaResults = data.people_also_ask || [];
 
     return paaResults.map(
@@ -43,8 +48,8 @@ export async function fetchGooglePAAQuestions(
         link: item.link || "",
       })
     ).filter((item: any) => item.question !== "");
-  } catch (error) {
-    console.error("SerpAPI error:", error);
+  } catch (error: any) {
+    console.error("[SerpAPI] Fetch execution failed:", error.message || error);
     return [];
   }
 }
