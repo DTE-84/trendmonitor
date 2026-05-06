@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
-import { handleScanTrends } from "./routes/scan-trends";
+import { handleScanTrends } from "../api/scan-trends";
 
 export function createServer() {
   const app = express();
@@ -22,16 +22,14 @@ export function createServer() {
 
   app.use("/api", api);
 
-  app.get("/ping", (_req, res) =>
-    res.json({ message: "Root Uplink Active" })
-  );
+  app.get("/ping", (_req, res) => res.json({ message: "Root Uplink Active" }));
 
   app.use(
     (
       err: any,
       _req: express.Request,
       res: express.Response,
-      _next: express.NextFunction
+      _next: express.NextFunction,
     ) => {
       console.error("[Global Error]:", err);
       res.status(500).json({
@@ -39,7 +37,7 @@ export function createServer() {
         detail: err.message || "Unknown error",
         stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
       });
-    }
+    },
   );
 
   return app;
