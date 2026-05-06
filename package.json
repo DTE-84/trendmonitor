@@ -14,9 +14,9 @@
     "typecheck": "tsc"
   },
   "engines": {
-    "pnpm": "9.15.0",
-    "node": "20.1.0"
+    "node": "20.x"
   },
+  
   "dependencies": {
     "@vercel/node": "^5.7.15",
     "dotenv": "^17.2.1",
