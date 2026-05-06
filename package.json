@@ -30,4 +30,8 @@
     "@radix-ui/react-dialog": "^1.1.14",
     
     "other-dependency": "^1.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.28.1"
   }
+}
