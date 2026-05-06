@@ -13,11 +13,18 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    
+    "@vercel/node": "^5.7.15",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-   
     "zod": "^3.25.76"
+  },
+  {
+    "compilerOptions": {
+      "typeRoots": [
+        "node_modules/@types",
+        "path/to/your/type/declarations"
+      ]
+    }
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.1",
