@@ -169,10 +169,18 @@ export default async function handler(
       summary:
         "Live trends show strong interest in inheritance planning and wealth transfer strategies.",
     });
+    res.json({
+      questions: allTrends,
+      top_theme: topTheme?.[0] || "General",
+      top_theme_pct: topThemePct,
+      summary:
+        "Live trends show strong interest in inheritance planning and wealth transfer strategies.",
+    });
   } catch (error: any) {
     console.error("[Trend Scan FAILURE]:", error);
-    res
-      .status(500)
-      .json({ error: "Nova Analysis Node Failed", detail: error.message });
+    res.status(500).json({
+      error: "Nova Analysis Node Failed",
+      detail: error.message,
+    });
   }
 }
