@@ -55,6 +55,48 @@ export async function fetchGooglePAAQuestions(
 }
 
 /**
+ * Fetch recent discussions from specific subreddits via SerpAPI Google engine
+ */
+export async function fetchRedditTrends(
+  query: string,
+  subreddits: string[] = ["personalfinance", "estateplanning", "inheritance"]
+): Promise<any[]> {
+  console.log(`[SerpAPI] Initiating Reddit telemetry for: "${query}"`);
+
+  if (!SERPAPI_KEY || SERPAPI_KEY.includes("REPLACE")) {
+    return [];
+  }
+
+  try {
+    const siteQuery = subreddits.map(s => `site:reddit.com/r/${s}`).join(" OR ");
+    const fullQuery = `(${siteQuery}) ${query}`;
+
+    const params = new URLSearchParams({
+      q: fullQuery,
+      engine: "google",
+      tbs: "qdr:m", // Results from the past month
+      api_key: SERPAPI_KEY,
+    });
+
+    const response = await fetch(`https://serpapi.com/search?${params}`);
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const results = data.organic_results || [];
+
+    return results.map((item: any) => ({
+      question: item.title || "",
+      snippet: item.snippet || "",
+      link: item.link || "",
+      subreddit: item.link?.split("/r/")[1]?.split("/")[0] || "reddit",
+    })).filter((item: any) => item.question !== "");
+  } catch (error: any) {
+    console.error("[SerpAPI Reddit] Fetch execution failed:", error.message);
+    return [];
+  }
+}
+
+/**
  * Categorize a question into one of the inheritance themes
  */
 export function categorizeQuestion(question: string): string {
@@ -117,11 +159,11 @@ export function determineTrend(
 export function generateInsight(question: string): string {
   const insights: Record<string, string> = {
     "Tax strategy":
-      "Signals concern about tax liability among heirs. Investors should emphasize tax-efficient wealth transfer strategies.",
+      "Signals peak concern about tax liability among younger heirs. Investors should emphasize tax-efficient wealth transfer strategies.",
     "Trust & estate":
-      "Shows widespread interest in proper estate structures. Strong educational content opportunity.",
+      "Fundamental educational interest shows widespread confusion about estate structures. Content opportunity to position as thought leader.",
     "Invest strategy":
-      "Indicates readiness to deploy inherited capital. High-value audience segment for investment guidance.",
+      "New entrants asking about investment priority. Shows receptiveness to wealth-building conversations and investment guidance.",
     "Heirs & family":
       "Highlights multi-generational wealth planning interest. Opportunity to position as family advisor.",
     "Legal process":
