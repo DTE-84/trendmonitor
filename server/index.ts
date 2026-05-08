@@ -1,9 +1,8 @@
-import "dotenv/config";
-import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import { handleDemo } from "./routes/demo";
-import scanTrendsModule from "../api/scan-trends";
-const handleScanTrends = scanTrendsModule;
+import { handleDemo } from "./routes/demo.js";
 
 export function createServer() {
   const app = express();
@@ -19,7 +18,6 @@ export function createServer() {
   });
 
   api.get("/demo", handleDemo);
-  
 
   app.use("/api", api);
 
@@ -28,9 +26,9 @@ export function createServer() {
   app.use(
     (
       err: any,
-      _req: express.Request,
-      res: express.Response,
-      _next: express.NextFunction,
+      _req: Request,
+      res: Response,
+      _next: NextFunction,
     ) => {
       console.error("[Global Error]:", err);
       res.status(500).json({

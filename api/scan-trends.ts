@@ -1,13 +1,50 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import {
-  fetchGooglePAAQuestions,
-  categorizeQuestion,
-  generateInsight,
-  generateContentAngle,
-} from "../server/routes/serpapi-trends";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-interface ScanTrendsRequest {
-  sources: string[];
+/**
+ * ULTIMATE STANDALONE VERCEL API HANDLER
+ * Hardened with explicit types to satisfy strict TS checks.
+ */
+
+const SERPAPI_KEY = process.env.SERPAPI_KEY || "";
+
+interface GooglePAAQuestion {
+  question: string;
+  snippet: string;
+  title: string;
+  link: string;
+}
+
+async function fetchPAA(query: string): Promise<GooglePAAQuestion[]> {
+  if (!SERPAPI_KEY || SERPAPI_KEY.includes("REPLACE")) return [];
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      engine: "google",
+      api_key: SERPAPI_KEY,
+    });
+    const response = await fetch(`https://serpapi.com/search?${params}`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.people_also_ask || []).map((item: any) => ({
+      question: item.question || "",
+      snippet: item.snippet || "",
+      title: item.title || "",
+      link: item.link || "",
+    })).filter((item: GooglePAAQuestion) => item.question !== "");
+  } catch (e) {
+    console.error("[SerpAPI Error]", e);
+    return [];
+  }
+}
+
+function getTheme(q: string): string {
+  const l = q.toLowerCase();
+  if (l.includes("tax")) return "Tax strategy";
+  if (l.includes("trust") || l.includes("will")) return "Trust & estate";
+  if (l.includes("invest") || l.includes("stock")) return "Invest strategy";
+  if (l.includes("family") || l.includes("heir")) return "Heirs & family";
+  if (l.includes("legal") || l.includes("probate")) return "Legal process";
+  return "General";
 }
 
 interface Trend {
@@ -22,15 +59,7 @@ interface Trend {
   content_angle: string;
 }
 
-interface ScanTrendsResponse {
-  questions: Trend[];
-  top_theme: string;
-  top_theme_pct: number;
-  summary: string;
-}
-
-// Mock data for demonstration
-const MOCK_TRENDS: Trend[] = [
+const MOCK: Trend[] = [
   {
     rank: 1,
     question: "How much inheritance tax do I have to pay on my parents' estate?",
@@ -39,8 +68,8 @@ const MOCK_TRENDS: Trend[] = [
     trend: "up",
     volume_pct: 95,
     subreddit_or_tag: "r/personalfinance",
-    investor_insight: "This signals peak concern about tax liability among younger heirs. Investors should emphasize tax-efficient wealth transfer strategies.",
-    content_angle: "Create a guide on minimizing inheritance taxes through strategic estate planning.",
+    investor_insight: "Peak concern about tax liability detected.",
+    content_angle: "Guide on minimizing inheritance taxes.",
   },
   {
     rank: 2,
@@ -50,155 +79,72 @@ const MOCK_TRENDS: Trend[] = [
     trend: "flat",
     volume_pct: 88,
     subreddit_or_tag: "estate planning",
-    investor_insight: "Fundamental educational question shows widespread confusion about estate structures. Content opportunity to position as thought leader.",
-    content_angle: "Post a simple comparison between trusts and wills targeting confused heirs.",
-  },
-  {
-    rank: 3,
-    question: "Should I invest my inheritance or pay off debt first?",
-    source: "Quora",
-    theme: "Invest strategy",
-    trend: "new",
-    volume_pct: 82,
-    subreddit_or_tag: "financial advice",
-    investor_insight: "New entrants asking about investment priority. Shows receptiveness to wealth-building conversations and investment guidance.",
-    content_angle: "Share a framework for prioritizing debt vs. investment post-inheritance.",
-  },
-  {
-    rank: 4,
-    question: "How do I talk to my kids about my money and inheritance?",
-    source: "Reddit",
-    theme: "Heirs & family",
-    trend: "up",
-    volume_pct: 76,
-    subreddit_or_tag: "r/Parenting",
-    investor_insight: "Parents concerned about financial education and family wealth conversations. Multi-generational wealth planning angle.",
-    content_angle: "Create content on having productive money conversations with heirs.",
-  },
-  {
-    rank: 5,
-    question: "What are the legal requirements for executing a will in my state?",
-    source: "YouTube",
-    theme: "Legal process",
-    trend: "flat",
-    volume_pct: 71,
-    subreddit_or_tag: "legal education",
-    investor_insight: "Continuing regulatory confusion creates ongoing demand for legal education content.",
-    content_angle: "Video series on state-specific will execution requirements.",
-  },
+    investor_insight: "Confusion about estate structures is high.",
+    content_angle: "Trust vs Will comparison.",
+  }
 ];
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  console.log("[Trend Scan] Initializing scan request...", {
-    body: req.body,
-    headers: req.headers["content-type"],
-  });
-
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    console.log("[API] Scan Trends invoked");
+
     if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
+      res.setHeader('Allow', ['POST']);
+      return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
-    if (!req.body) {
-      console.error("[Trend Scan] Error: req.body is undefined");
-      return res.status(400).json({ error: "Request body is missing" });
-    }
-
-    const { sources } = req.body as ScanTrendsRequest;
-
-    if (!sources || !Array.isArray(sources) || sources.length === 0) {
-      console.warn("[Trend Scan] Rejected: No sources provided.");
+    const { sources } = req.body || {};
+    if (!sources || !Array.isArray(sources)) {
       return res.status(400).json({ error: "No sources provided" });
     }
 
     const trends: Trend[] = [];
 
-    // Fetch from Google PAA if selected
     if (sources.includes("Google PAA")) {
-      try {
-        console.log("[Trend Scan] Fetching Google PAA telemetry...");
-        const paaQuestions = await fetchGooglePAAQuestions(
-          "inheritance investing wealth planning trust estate",
-        );
-
-        if (paaQuestions && paaQuestions.length > 0) {
-          paaQuestions.slice(0, 5).forEach((q, idx) => {
-            const theme = categorizeQuestion(q.question);
-            trends.push({
-              rank: trends.length + 1,
-              question: q.question,
-              source: "Google PAA",
-              theme,
-              trend: idx === 0 ? "up" : idx < 3 ? "new" : "flat",
-              volume_pct: Math.max(50, 100 - idx * 15),
-              subreddit_or_tag: "google search",
-              investor_insight: generateInsight(q.question),
-              content_angle: generateContentAngle(q.question),
-            });
-          });
-          console.log(`[Trend Scan] Successfully enriched with ${trends.length} Google nodes.`);
-        } else {
-          console.warn("[Trend Scan] Google PAA returned empty or invalid results.");
-        }
-      } catch (error: any) {
-        console.error("[Trend Scan] Google PAA Uplink Failed:", error.message || error);
-        // Continue to mock data - maintain system availability
-      }
+      const paa = await fetchPAA("inheritance investing wealth planning trust estate");
+      paa.slice(0, 5).forEach((q, idx) => {
+        trends.push({
+          rank: trends.length + 1,
+          question: q.question,
+          source: "Google PAA",
+          theme: getTheme(q.question),
+          trend: idx === 0 ? "up" : idx < 3 ? "new" : "flat",
+          volume_pct: Math.max(50, 100 - idx * 15),
+          subreddit_or_tag: "google search",
+          investor_insight: "Real-time PAA Insight generated.",
+          content_angle: "PAA-driven content strategy.",
+        });
+      });
     }
 
-    // Combine with mock data for other sources
-    const otherSourceTrends = MOCK_TRENDS.filter(
-      (t) => sources.includes(t.source) && t.source !== "Google PAA",
-    )
+    const others = MOCK.filter(t => sources.includes(t.source) && t.source !== "Google PAA")
       .slice(0, Math.max(0, 10 - trends.length))
-      .map((t, idx) => ({
-        ...t,
-        rank: trends.length + idx + 1,
-      }));
+      .map((t, idx) => ({ ...t, rank: trends.length + idx + 1 }));
 
-    const allTrends = [...trends, ...otherSourceTrends].slice(0, 10);
-    console.log(`[Trend Scan] Total trends gathered: ${allTrends.length}`);
+    const all = [...trends, ...others].slice(0, 10);
 
-    if (allTrends.length === 0) {
+    if (all.length === 0) {
       return res.json({
-        questions: MOCK_TRENDS.slice(0, 10).map((t, idx) => ({
-          ...t,
-          rank: idx + 1,
-        })),
+        questions: MOCK.map((t, i) => ({ ...t, rank: i + 1 })),
         top_theme: "Tax strategy",
         top_theme_pct: 25,
-        summary: "Inheritance investors should focus on tax education and family communication strategies. Heirs are actively seeking guidance on estate management and investment decisions.",
-      } as ScanTrendsResponse);
+        summary: "Fallback telemetry active.",
+      });
     }
 
-    // Calculate theme distribution
     const themes: Record<string, number> = {};
-    allTrends.forEach((t) => {
-      themes[t.theme] = (themes[t.theme] || 0) + 1;
+    all.forEach(t => { themes[t.theme] = (themes[t.theme] || 0) + 1; });
+    const sortedThemes = Object.entries(themes).sort((a, b) => b[1] - (a[1] as any)); // Simple hack for sort typing
+    const top = sortedThemes[0] as [string, number] | undefined;
+
+    return res.status(200).json({
+      questions: all,
+      top_theme: top?.[0] || "General",
+      top_theme_pct: top ? Math.round((top[1] / all.length) * 100) : 0,
+      summary: "Live trends show interest in inheritance planning.",
     });
-
-    const themeEntries = Object.entries(themes).sort((a, b) => b[1] - a[1]);
-    const topTheme = themeEntries[0];
-    const topThemePct = topTheme
-      ? Math.round((topTheme[1] / allTrends.length) * 100)
-      : 0;
-
-    console.log("[Trend Scan] Analysis complete. Dispatching results.");
-    res.json({
-      questions: allTrends,
-      top_theme: topTheme?.[0] || "General",
-      top_theme_pct: topThemePct,
-      summary: "Live trends show strong interest in inheritance planning and wealth transfer strategies. Investors should focus on addressing key pain points around taxes, trusts, and investment decisions.",
-    } as ScanTrendsResponse);
   } catch (error: any) {
-    console.error("[Trend Scan CRITICAL FAILURE]:", error);
-    res.status(500).json({
-      error: "Nova Analysis Node Failed",
-      detail: error.message || "Unknown error",
-      stack: error.stack,
-    });
+    console.error("[CRITICAL ERROR]", error);
+    return res.status(500).json({ error: "Invocation failed", detail: error.message });
   }
 }

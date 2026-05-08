@@ -3,8 +3,8 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
+      "source": "/api/((?!scan-trends).*)",
+      "destination": "/api/index.ts"
     },
     {
       "source": "/(.*)",
